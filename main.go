@@ -4,9 +4,12 @@ import (
 	"bufio"
 	"crypto/rand"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -21,16 +24,112 @@ const asciiArt = `
 |_|              
 `
 
-var countryIPRanges = map[string][]string{
-	"CN": {"1.0.1.0/24", "1.0.2.0/23", "1.1.1.0/24", "14.116.0.0/16", "116.62.0.0/16"},
-	"US": {"8.8.8.0/24", "13.107.21.0/24", "34.192.0.0/12", "104.16.0.0/12"},
-	"JP": {"1.0.64.0/18", "1.1.64.0/24", "118.238.0.0/16"},
+var geoDataURLs = map[string]string{
+	"CN": "https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china.txt",
+	"US": "https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/us.txt",
+	"JP": "https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/jp.txt",
 }
+
+const cacheDirName = ".poti_cache"
 
 type ScanResult struct {
 	IP     string
 	Port   int
 	Banner string
+}
+
+func getCacheFilePath(cc string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(".", cacheDirName, cc+".txt")
+	}
+	return filepath.Join(home, cacheDirName, cc+".txt")
+}
+
+func ensureCacheDir() {
+	home, err := os.UserHomeDir()
+	var path string
+	if err != nil {
+		path = filepath.Join(".", cacheDirName)
+	} else {
+		path = filepath.Join(home, cacheDirName)
+	}
+	_ = os.MkdirAll(path, 0755)
+}
+
+func loadIPRanges(cc string) ([]string, error) {
+	ensureCacheDir()
+	cachePath := getCacheFilePath(cc)
+
+	if _, err := os.Stat(cachePath); err == nil {
+		return readLines(cachePath)
+	}
+
+	fmt.Printf("\033[1;34m[*] Local database missing. Syncing full real-time %s asset pool from network...\033[0m\n", cc)
+	url, exists := geoDataURLs[cc]
+	if !exists {
+		return nil, fmt.Errorf("country unsupported")
+	}
+
+	client := http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(cachePath)
+	if err != nil {
+		return nil, err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return readLines(cachePath)
+}
+
+func readLines(path string) ([]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line != "" && !strings.HasPrefix(line, "#") {
+			lines = append(lines, line)
+		}
+	}
+	return lines, scanner.Err()
+}
+
+func clearAllCache() {
+	home, err := os.UserHomeDir()
+	var path string
+	if err != nil {
+		path = filepath.Join(".", cacheDirName)
+	} else {
+		path = filepath.Join(home, cacheDirName)
+	}
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		fmt.Println("\033[1;32m[+] No downloaded data found. System is already clean.\033[0m")
+		return
+	}
+
+	err = os.RemoveAll(path)
+	if err != nil {
+		fmt.Printf("\033[1;31m[-] Error cleaning data: %v\033[0m\n", err)
+	} else {
+		fmt.Println("\033[1;32m[+] [Success] All downloaded geographical intelligence data completely wiped out!\033[0m")
+	}
 }
 
 func grabBanner(ip string, port int, timeout time.Duration) string {
@@ -44,7 +143,7 @@ func grabBanner(ip string, port int, timeout time.Duration) string {
 	_ = conn.SetDeadline(time.Now().Add(timeout))
 
 	if port == 80 || port == 8080 || port == 443 {
-		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.5.0\r\nConnection: close\r\n\r\n", ip)
+		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.6.0\r\nConnection: close\r\n\r\n", ip)
 	}
 
 	scanner := bufio.NewScanner(conn)
@@ -133,18 +232,25 @@ func worker(tasks <-chan string, ports []int, results chan<- ScanResult, wg *syn
 
 func main() {
 	fmt.Printf("\033[1;36m%s\033[0m", asciiArt)
-	fmt.Println("\033[1;32m[+] poti Engine - Smart Interactive Radar v0.5.0\033[0m")
+	fmt.Println("\033[1;32m[+] poti Engine - Autonomous Intelligence Radar v0.6.0\033[0m")
 	fmt.Println("--------------------------------------------------")
 
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Println("\033[1;33m[?] Select Target Geographical Region:\033[0m")
+	fmt.Println("\033[1;33m[?] Select Target Action or Geographical Region:\033[0m")
 	fmt.Println("  1. China (CN)")
 	fmt.Println("  2. United States (US)")
 	fmt.Println("  3. Japan (JP)")
-	fmt.Print("Choose option (1-3, default 1): ")
+	fmt.Println("  4. 🧹 Clear All Downloaded Cache Data (一键清理下载数据)")
+	fmt.Print("Choose option (1-4, default 1): ")
 	ccInput, _ := reader.ReadString('\n')
 	ccInput = strings.TrimSpace(ccInput)
+
+	if ccInput == "4" {
+		fmt.Println("\n[*] Running secure system cleaner...")
+		clearAllCache()
+		return
+	}
 
 	cc := "CN"
 	if ccInput == "2" {
@@ -153,15 +259,21 @@ func main() {
 		cc = "JP"
 	}
 
-	fmt.Print("\n\033[1;33m[?] How many random IPs to extract? (default 5):\033[0m ")
+	ranges, err := loadIPRanges(cc)
+	if err != nil {
+		fmt.Printf("\033[1;31m[-] Synchronization failure: %v\033[0m\n", err)
+		return
+	}
+
+	fmt.Print("\n\033[1;33m[?] Enter extraction quota (How many random targets? default 10):\033[0m ")
 	limitInput, _ := reader.ReadString('\n')
 	limitInput = strings.TrimSpace(limitInput)
-	limit := 5
+	limit := 10
 	if limitInput != "" {
 		fmt.Sscanf(limitInput, "%d", &limit)
 	}
 	if limit <= 0 {
-		limit = 5
+		limit = 10
 	}
 
 	fmt.Print("\n\033[1;33m[?] Enter ports to scan (comma-separated, default 80,443,8080):\033[0m ")
@@ -171,10 +283,17 @@ func main() {
 		portsInput = "80,443,8080"
 	}
 
-	ranges := countryIPRanges[cc]
+	fmt.Println("\n[*] Formulating targeting lattice matrix from large scale assets...")
 	var allIPs []string
 	for _, cidr := range ranges {
-		allIPs = append(allIPs, getIPsFromCIDR(cidr)...)
+		if !strings.Contains(cidr, ":") {
+			allIPs = append(allIPs, getIPsFromCIDR(cidr)...)
+		}
+	}
+
+	if len(allIPs) == 0 {
+		fmt.Println("\033[1;31m[-] Target pool generation yielded zero viable endpoints.\033[0m")
+		return
 	}
 
 	targets := pickRandomIPs(allIPs, limit)
@@ -189,18 +308,19 @@ func main() {
 		}
 	}
 
-	fmt.Println("\n--------------------------------------------------")
-	fmt.Printf("[*] Launching Radar Mode...\n")
-	fmt.Printf("[*] Target Region  : %s\n", cc)
-	fmt.Printf("[*] Extracted Nodes: %d targets\n", len(targets))
-	fmt.Printf("[*] Target Ports   : %v\n", targetPorts)
-	fmt.Println("--------------------------------------------------\n[*] Mapping live space assets...")
+	fmt.Println("--------------------------------------------------")
+	fmt.Printf("[*] Launching Radar Matrix Mode...\n")
+	fmt.Printf("[*] Target Region    : %s\n", cc)
+	fmt.Printf("[*] Total Available Pool Size: %d live public subnets\n", len(allIPs))
+	fmt.Printf("[*] Extracted Audit Targets  : %d random nodes\n", len(targets))
+	fmt.Printf("[*] Target Verification Ports: %v\n", targetPorts)
+	fmt.Println("--------------------------------------------------\n[*] Mapping live space assets across the ocean...")
 
 	tasksChan := make(chan string, len(targets))
 	resultsChan := make(chan ScanResult, 100)
 	var wg sync.WaitGroup
 
-	numWorkers := 10
+	numWorkers := 30
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
 		go worker(tasksChan, targetPorts, resultsChan, &wg)
@@ -224,5 +344,5 @@ func main() {
 	}
 
 	fmt.Println("\n--------------------------------------------------")
-	fmt.Printf("[*] Smart check complete. Total discoveries: %d\n", found)
+	fmt.Printf("[*] Real-world intelligence cycle complete. Total discoveries: %d\n", found)
 }
