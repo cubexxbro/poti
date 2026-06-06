@@ -72,46 +72,36 @@ func ensureCacheDir() {
 func loadIPRanges(cc string) ([]string, error) {
 	ensureCacheDir()
 	cachePath := getCacheFilePath(cc)
-
 	if _, err := os.Stat(cachePath); err == nil {
 		return readLines(cachePath)
 	}
-
 	fmt.Printf("\033[1;34m[*] Resolving remote nodes for '%s'...\033[0m\n", cc)
-	
 	url := fmt.Sprintf("https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/%s.txt", strings.ToLower(cc))
 	if cc == "CN" {
 		url = "https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china.txt"
 	}
-
 	client := http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("remote registry returned status: %d (Invalid code?)", resp.StatusCode)
+		return nil, fmt.Errorf("remote registry returned status: %d", resp.StatusCode)
 	}
-
 	totalBytes, _ := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
-
 	out, err := os.Create(cachePath)
 	if err != nil {
 		return nil, err
 	}
 	defer out.Close()
-
 	proxy := &ProgressProxy{Total: totalBytes}
 	teeReader := io.TeeReader(resp.Body, proxy)
-
 	_, err = io.Copy(out, teeReader)
 	fmt.Println()
 	if err != nil {
 		return nil, err
 	}
-
 	return readLines(cachePath)
 }
 
@@ -121,7 +111,6 @@ func readLines(path string) ([]string, error) {
 		return nil, err
 	}
 	defer file.Close()
-
 	var lines []string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -131,7 +120,7 @@ func readLines(path string) ([]string, error) {
 		}
 	}
 	if len(lines) == 0 {
-		return nil, fmt.Errorf("empty asset pool: no valid CIDR segments detected")
+		return nil, fmt.Errorf("empty asset pool")
 	}
 	return lines, scanner.Err()
 }
@@ -144,18 +133,12 @@ func clearAllCache() {
 	} else {
 		path = filepath.Join(home, cacheDirName)
 	}
-
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		fmt.Println("\033[1;32m[+] No downloaded data found. System is already clean.\033[0m")
+		fmt.Println("\033[1;32m[+] Cache already clean.\033[0m")
 		return
 	}
-
-	err = os.RemoveAll(path)
-	if err != nil {
-		fmt.Printf("\033[1;31m[-] Error cleaning data: %v\033[0m\n", err)
-	} else {
-		fmt.Println("\033[1;32m[+] [Success] Cache directory purged.\033[0m")
-	}
+	_ = os.RemoveAll(path)
+	fmt.Println("\033[1;32m[+] Cache directory purged.\033[0m")
 }
 
 func grabBanner(ip string, port int, timeout time.Duration) string {
@@ -165,16 +148,12 @@ func grabBanner(ip string, port int, timeout time.Duration) string {
 		return ""
 	}
 	defer conn.Close()
-
 	_ = conn.SetDeadline(time.Now().Add(timeout))
-
 	if port == 80 || port == 8080 || port == 443 {
-		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.7.2\r\nConnection: close\r\n\r\n", ip)
+		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.7.3\r\nConnection: close\r\n\r\n", ip)
 	}
-
 	scanner := bufio.NewScanner(conn)
 	var bannerLines []string
-	
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" && (port == 80 || port == 8080 || port == 443) {
@@ -186,11 +165,10 @@ func grabBanner(ip string, port int, timeout time.Duration) string {
 			break
 		}
 	}
-
 	if len(bannerLines) > 0 {
 		return strings.Join(bannerLines, "\n")
 	}
-	return "    │ [No immediate response / Hidden Active Service]"
+	return "    │ [No immediate response]"
 }
 
 func incIP(ip net.IP) {
@@ -208,11 +186,9 @@ func getIPsFromCIDR(cidr string) []string {
 	if err != nil {
 		return ips
 	}
-
 	for el := ip.Mask(ipnet.Mask); ipnet.Contains(el); incIP(el) {
 		ips = append(ips, el.String())
 	}
-	
 	if len(ips) > 2 {
 		return ips[1 : len(ips)-1]
 	}
@@ -226,10 +202,8 @@ func pickRandomIPs(ipPool []string, count int) []string {
 	if count > len(ipPool) {
 		count = len(ipPool)
 	}
-
 	result := make([]string, count)
 	chosen := make(map[int]bool)
-
 	for i := 0; i < count; i++ {
 		for {
 			nBig, _ := rand.Int(rand.Reader, big.NewInt(int64(len(ipPool))))
@@ -258,112 +232,82 @@ func worker(tasks <-chan string, ports []int, results chan<- ScanResult, wg *syn
 
 func main() {
 	fmt.Printf("\033[1;36m%s\033[0m", asciiArt)
-	fmt.Println("\033[1;32m[+] poti Engine - Global Intelligence Radar v0.7.2\033[0m")
+	fmt.Println("\033[1;32m[+] poti Engine - Global Intelligence Radar v0.7.3\033[0m")
 	fmt.Println("--------------------------------------------------")
-
 	reader := bufio.NewReader(os.Stdin)
-
 	fmt.Println("\033[1;33m[?] Enter Target Country Code (e.g. US, CN, JP, KR, DE) or 'clear':\033[0m")
 	fmt.Print("Input (default CN): ")
 	ccInput, _ := reader.ReadString('\n')
 	ccInput = strings.TrimSpace(strings.ToUpper(ccInput))
-
 	if ccInput == "CLEAR" {
-		fmt.Println("\n[*] Running secure system cleaner...")
 		clearAllCache()
 		return
 	}
-
 	cc := "CN"
 	if ccInput != "" {
 		cc = ccInput
 	}
-
 	ranges, err := loadIPRanges(cc)
 	if err != nil {
-		fmt.Printf("\033[1;31m[-] Synchronization failure: %v\033[0m\n", err)
+		fmt.Printf("\033[1;31m[-] Error: %v\033[0m\n", err)
 		return
 	}
-
-	fmt.Print("\n\033[1;33m[?] Enter extraction quota (How many random targets? default 10):\033[0m ")
+	fmt.Print("\n\033[1;33m[?] Enter extraction quota (default 10):\033[0m ")
 	limitInput, _ := reader.ReadString('\n')
-	limitInput = strings.TrimSpace(limitInput)
 	limit := 10
-	if limitInput != "" {
-		fmt.Sscanf(limitInput, "%d", &limit)
-	}
-	if limit <= 0 {
-		limit = 10
-	}
-
-	fmt.Print("\n\033[1;33m[?] Enter ports to scan (comma-separated, default 80,443,8080):\033[0m ")
+	fmt.Sscanf(strings.TrimSpace(limitInput), "%d", &limit)
+	fmt.Print("\n\033[1;33m[?] Enter ports (default 80,443,8080):\033[0m ")
 	portsInput, _ := reader.ReadString('\n')
 	portsInput = strings.TrimSpace(portsInput)
 	if portsInput == "" {
 		portsInput = "80,443,8080"
 	}
-
 	fmt.Println("\n[*] Formulating targeting lattice matrix from large scale assets...")
 	var allIPs []string
-	for _, cidr := range ranges {
+	totalRanges := len(ranges)
+	for i, cidr := range ranges {
 		cidr = strings.TrimSpace(cidr)
 		if cidr != "" && !strings.Contains(cidr, ":") {
+			fmt.Printf("\r\033[1;36m[*] Parsing CIDR blocks... [%d/%d]\033[0m", i+1, totalRanges)
 			allIPs = append(allIPs, getIPsFromCIDR(cidr)...)
 		}
 	}
-
+	fmt.Println("\n[+] Lattice matrix generation complete.")
 	if len(allIPs) == 0 {
-		fmt.Println("\033[1;31m[-] Target pool generation yielded zero viable endpoints.\033[0m")
+		fmt.Println("\033[1;31m[-] Zero viable endpoints.\033[0m")
 		return
 	}
-
 	targets := pickRandomIPs(allIPs, limit)
-	
 	var targetPorts []int
-	portSpecs := strings.Split(portsInput, ",")
-	for _, spec := range portSpecs {
+	for _, spec := range strings.Split(portsInput, ",") {
 		var p int
 		fmt.Sscanf(strings.TrimSpace(spec), "%d", &p)
 		if p > 0 && p <= 65535 {
 			targetPorts = append(targetPorts, p)
 		}
 	}
-
 	fmt.Println("--------------------------------------------------")
-	fmt.Printf("[*] Launching Radar Matrix Mode...\n")
-	fmt.Printf("[*] Target Region    : %s\n", cc)
-	fmt.Printf("[*] Total Available Pool Size: %d live public subnets\n", len(allIPs))
-	fmt.Printf("[*] Extracted Audit Targets  : %d random nodes\n", len(targets))
-	fmt.Printf("[*] Target Verification Ports: %v\n", targetPorts)
-	fmt.Println("--------------------------------------------------\n[*] Mapping live space assets across the world...")
-
+	fmt.Printf("[*] Launching Radar Matrix Mode... Mapping live space assets across the world...\n")
 	tasksChan := make(chan string, len(targets))
 	resultsChan := make(chan ScanResult, 100)
 	var wg sync.WaitGroup
-
-	numWorkers := 30
-	for i := 0; i < numWorkers; i++ {
+	for i := 0; i < 30; i++ {
 		wg.Add(1)
 		go worker(tasksChan, targetPorts, resultsChan, &wg)
 	}
-
 	for _, ip := range targets {
 		tasksChan <- ip
 	}
 	close(tasksChan)
-
 	go func() {
 		wg.Wait()
 		close(resultsChan)
 	}()
-
 	found := 0
 	for res := range resultsChan {
 		found++
 		fmt.Printf("\n [🔥] Found Exposed Asset: \033[1;33m%s\033[0m:\033[1;32m%d\033[0m\n", res.IP, res.Port)
 		fmt.Println(res.Banner)
 	}
-
-	fmt.Println("\n--------------------------------------------------")
-	fmt.Printf("[*] Real-world intelligence cycle complete. Total discoveries: %d\n", found)
+	fmt.Printf("\n[*] Real-world intelligence cycle complete. Discoveries: %d\n", found)
 }
