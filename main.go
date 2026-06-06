@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -30,6 +31,23 @@ type ScanResult struct {
 	IP     string
 	Port   int
 	Banner string
+}
+
+type ProgressProxy struct {
+	Total   int64
+	Current int64
+}
+
+func (pp *ProgressProxy) Write(p []byte) (int, error) {
+	n := len(p)
+	pp.Current += int64(n)
+	if pp.Total > 0 {
+		pct := (pp.Current * 100) / pp.Total
+		fmt.Printf("\r\033[1;34m[*] Synchronizing global matrix tables... [%d%%]\033[0m", pct)
+	} else {
+		fmt.Printf("\r\033[1;34m[*] Synchronizing global matrix tables... [%d KB]\033[0m", pp.Current/1024)
+	}
+	return n, nil
 }
 
 func getCacheFilePath(cc string) string {
@@ -59,19 +77,21 @@ func loadIPRanges(cc string) ([]string, error) {
 		return readLines(cachePath)
 	}
 
-	fmt.Printf("\033[1;34m[*] Local database missing. Syncing full real-time %s asset pool from network...\033[0m\n", cc)
+	fmt.Printf("\033[1;34m[*] Local database missing. Resolving remote nodes for '%s'...\033[0m\n", cc)
 	
-	url := fmt.Printf("https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/%s.txt", strings.ToLower(cc))
+	url := fmt.Sprintf("https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/%s.txt", strings.ToLower(cc))
 	if cc == "CN" {
 		url = "https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china.txt"
 	}
 
-	client := http.Client{Timeout: 15 * time.Second}
+	client := http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil || resp.StatusCode != 200 {
 		return nil, fmt.Errorf("failed to fetch data or country code '%s' is invalid/unsupported", cc)
 	}
 	defer resp.Body.Close()
+
+	totalBytes, _ := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
 
 	out, err := os.Create(cachePath)
 	if err != nil {
@@ -79,7 +99,11 @@ func loadIPRanges(cc string) ([]string, error) {
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, resp.Body)
+	proxy := &ProgressProxy{Total: totalBytes}
+	teeReader := io.TeeReader(resp.Body, proxy)
+
+	_, err = io.Copy(out, teeReader)
+	fmt.Println()
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +162,7 @@ func grabBanner(ip string, port int, timeout time.Duration) string {
 	_ = conn.SetDeadline(time.Now().Add(timeout))
 
 	if port == 80 || port == 8080 || port == 443 {
-		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.7.0\r\nConnection: close\r\n\r\n", ip)
+		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.7.1\r\nConnection: close\r\n\r\n", ip)
 	}
 
 	scanner := bufio.NewScanner(conn)
@@ -227,7 +251,7 @@ func worker(tasks <-chan string, ports []int, results chan<- ScanResult, wg *syn
 
 func main() {
 	fmt.Printf("\033[1;36m%s\033[0m", asciiArt)
-	fmt.Println("\033[1;32m[+] poti Engine - Global Intelligence Radar v0.7.0\033[0m")
+	fmt.Println("\033[1;32m[+] poti Engine - Global Intelligence Radar v0.7.1\033[0m")
 	fmt.Println("--------------------------------------------------")
 
 	reader := bufio.NewReader(os.Stdin)
