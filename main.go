@@ -77,7 +77,7 @@ func loadIPRanges(cc string) ([]string, error) {
 		return readLines(cachePath)
 	}
 
-	fmt.Printf("\033[1;34m[*] Local database missing. Resolving remote nodes for '%s'...\033[0m\n", cc)
+	fmt.Printf("\033[1;34m[*] Resolving remote nodes for '%s'...\033[0m\n", cc)
 	
 	url := fmt.Sprintf("https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/%s.txt", strings.ToLower(cc))
 	if cc == "CN" {
@@ -86,10 +86,14 @@ func loadIPRanges(cc string) ([]string, error) {
 
 	client := http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Get(url)
-	if err != nil || resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to fetch data or country code '%s' is invalid/unsupported", cc)
+	if err != nil {
+		return nil, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("remote registry returned status: %d (Invalid code?)", resp.StatusCode)
+	}
 
 	totalBytes, _ := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
 
@@ -126,6 +130,9 @@ func readLines(path string) ([]string, error) {
 			lines = append(lines, line)
 		}
 	}
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("empty asset pool: no valid CIDR segments detected")
+	}
 	return lines, scanner.Err()
 }
 
@@ -147,7 +154,7 @@ func clearAllCache() {
 	if err != nil {
 		fmt.Printf("\033[1;31m[-] Error cleaning data: %v\033[0m\n", err)
 	} else {
-		fmt.Println("\033[1;32m[+] [Success] All downloaded geographical intelligence data completely wiped out!\033[0m")
+		fmt.Println("\033[1;32m[+] [Success] Cache directory purged.\033[0m")
 	}
 }
 
@@ -162,7 +169,7 @@ func grabBanner(ip string, port int, timeout time.Duration) string {
 	_ = conn.SetDeadline(time.Now().Add(timeout))
 
 	if port == 80 || port == 8080 || port == 443 {
-		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.7.1\r\nConnection: close\r\n\r\n", ip)
+		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.7.2\r\nConnection: close\r\n\r\n", ip)
 	}
 
 	scanner := bufio.NewScanner(conn)
@@ -251,7 +258,7 @@ func worker(tasks <-chan string, ports []int, results chan<- ScanResult, wg *syn
 
 func main() {
 	fmt.Printf("\033[1;36m%s\033[0m", asciiArt)
-	fmt.Println("\033[1;32m[+] poti Engine - Global Intelligence Radar v0.7.1\033[0m")
+	fmt.Println("\033[1;32m[+] poti Engine - Global Intelligence Radar v0.7.2\033[0m")
 	fmt.Println("--------------------------------------------------")
 
 	reader := bufio.NewReader(os.Stdin)
