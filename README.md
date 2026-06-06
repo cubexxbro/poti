@@ -31,5 +31,29 @@ cd ~/Desktop
 # Grant execution permissions to the engine
 chmod +x poti-darwin-arm64
 
+### 💻 2. Deployment & Execution
+
+Open your terminal and use **one of the two methods** below to grant permissions and run the tool. 
+
+#### Method A: The Drag-and-Drop Method (Easiest & Recommended)
+If you directly type `chmod +x poti-darwin-arm64`, it might fail with a "No such file or directory" error because the terminal is not looking at the right folder. Use the mouse to assist instead:
+
+1. Type `chmod +x ` in your terminal (**Make sure to add a trailing SPACE after `+x`**, do not press Enter yet).
+2. Drag the downloaded `poti-darwin-arm64` file from your desktop/finder and **drop it directly into the terminal window**. The terminal will automatically populate the full file path.
+3. Press **Enter**.
+4. Type `./` and drag-and-drop the file into the terminal **for the second time**, then press **Enter** to fire up the engine.
+
+#### Method B: The Absolute Path Method
+Alternatively, you can manually navigate to the file's directory before executing the command:
+
+```bash
+# Move to the Desktop directory where the binary is saved
+cd ~/Desktop
+
+# Grant execution permissions to the binary inside this folder
+chmod +x poti-darwin-arm64
+
+# Fire up the engine
+./poti-darwin-arm64
 # Fire up the engine
 ./poti-darwin-arm64
