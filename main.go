@@ -103,7 +103,7 @@ func readLines(path string) ([]string, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line != "" && !strings.HasPrefix(line, "#") {
+		if line != "" && !strings.HasPrefix(line, "#") && strings.Contains(line, "/") {
 			lines = append(lines, line)
 		}
 	}
@@ -143,7 +143,7 @@ func grabBanner(ip string, port int, timeout time.Duration) string {
 	_ = conn.SetDeadline(time.Now().Add(timeout))
 
 	if port == 80 || port == 8080 || port == 443 {
-		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.6.0\r\nConnection: close\r\n\r\n", ip)
+		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.6.1\r\nConnection: close\r\n\r\n", ip)
 	}
 
 	scanner := bufio.NewScanner(conn)
@@ -178,7 +178,7 @@ func incIP(ip net.IP) {
 
 func getIPsFromCIDR(cidr string) []string {
 	var ips []string
-	ip, ipnet, err := net.ParseCIDR(cidr)
+	ip, ipnet, err := net.ParseCIDR(strings.TrimSpace(cidr))
 	if err != nil {
 		return ips
 	}
@@ -232,7 +232,7 @@ func worker(tasks <-chan string, ports []int, results chan<- ScanResult, wg *syn
 
 func main() {
 	fmt.Printf("\033[1;36m%s\033[0m", asciiArt)
-	fmt.Println("\033[1;32m[+] poti Engine - Autonomous Intelligence Radar v0.6.0\033[0m")
+	fmt.Println("\033[1;32m[+] poti Engine - Autonomous Intelligence Radar v0.6.1\033[0m")
 	fmt.Println("--------------------------------------------------")
 
 	reader := bufio.NewReader(os.Stdin)
@@ -286,7 +286,8 @@ func main() {
 	fmt.Println("\n[*] Formulating targeting lattice matrix from large scale assets...")
 	var allIPs []string
 	for _, cidr := range ranges {
-		if !strings.Contains(cidr, ":") {
+		cidr = strings.TrimSpace(cidr)
+		if cidr != "" && !strings.Contains(cidr, ":") {
 			allIPs = append(allIPs, getIPsFromCIDR(cidr)...)
 		}
 	}
