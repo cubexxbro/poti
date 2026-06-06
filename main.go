@@ -15,71 +15,105 @@ import (
 )
 
 func main() {
-	fmt.Println("[+] poti v0.7.5 - Global Turbo Engine")
+	fmt.Println(`
+                               
+  _ __   ___   _ __  _       
+ | '_ \ / _ \ | __|(_)      
+ | |_) | (_) || |_  | |      
+ | .__/ \___/  \__| |_|      
+ |_|                         
+                             
+    `)
+	fmt.Println("[+] poti v0.8.0 - Global Intelligence Radar")
+	fmt.Println("[*] Mode: Verbose Global Scanning")
+	
 	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Print("Target CC: ")
+	fmt.Print("Target CC (e.g. US, CN, JP or ALL): ")
 	cc, _ := reader.ReadString('\n')
 	cc = strings.TrimSpace(strings.ToUpper(cc))
-	if cc == "" { cc = "CN" }
+	if cc == "" { cc = "ALL" }
 
-	fmt.Println("[*] Fetching global assets...")
+	fmt.Println("[*] Initializing global network asset lattice...")
 	ips := loadGlobalAssets(cc)
-	if len(ips) == 0 { fmt.Println("[-] No assets found."); return }
+	if len(ips) == 0 { fmt.Println("[-] No assets fetched."); return }
 
 	fmt.Print("Quota: ")
 	q, _ := reader.ReadString('\n')
 	limit := 100
 	fmt.Sscanf(strings.TrimSpace(q), "%d", &limit)
 
-	fmt.Println("[*] Radar active...")
+	fmt.Println("[*] Execution logic loaded. Terminal pipeline active.")
 	results := make(chan string, limit)
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	
+	semaphore := make(chan struct{}, 20) 
+
+	for _, ip := range pickRandomIPs(ips, limit) {
 		wg.Add(1)
-		go func() {
+		semaphore <- struct{}{}
+		go func(addr string) {
 			defer wg.Done()
-			for _, ip := range pickRandomIPs(ips, limit/100 + 1) {
-				if check(ip, 80) { results <- ip }
+			defer func() { <-semaphore }()
+			
+			fmt.Printf("[...] Dialing: %s:80 -> establishing handshake...\n", addr)
+			if check(addr, 80) {
+				fmt.Printf("[!!!] Success: Active Node Verified -> %s\n", addr)
+				results <- addr
+			} else {
+				fmt.Printf("[-] Failed: Connection dropped for %s\n", addr)
 			}
-		}()
+			time.Sleep(150 * time.Millisecond) 
+		}(ip)
 	}
+
 	go func() { wg.Wait(); close(results) }()
-	for res := range results { fmt.Printf("[!] Found: %s\n", res) }
+	
+	var activeCount int
+	for range results { activeCount++ }
+	fmt.Printf("[*] Radar operation finished. Total active assets found: %d\n", activeCount)
 }
 
 func loadGlobalAssets(cc string) []string {
-	cachePath := filepath.Join(os.TempDir(), "poti_"+cc+".cache")
-	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
-		url := fmt.Sprintf("https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/%s.txt", strings.ToLower(cc))
-		resp, _ := http.Get(url)
-		if resp != nil && resp.StatusCode == 200 {
-			out, _ := os.Create(cachePath)
+	var ccs []string
+	if cc == "ALL" {
+		ccs = []string{"us", "cn", "jp", "de", "kr", "gb", "fr", "ru"}
+	} else {
+		ccs = []string{strings.ToLower(cc)}
+	}
+
+	var allIPs []string
+	for _, currentCC := range ccs {
+		cache := filepath.Join(os.TempDir(), "poti_"+currentCC+".cache")
+		if _, err := os.Stat(cache); os.IsNotExist(err) {
+			fmt.Printf("[*] Downloading remote registry files for sovereign space: %s...\n", strings.ToUpper(currentCC))
+			url := fmt.Sprintf("https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/%s.txt", currentCC)
+			resp, err := http.Get(url)
+			if err != nil || resp.StatusCode != 200 {
+				fmt.Printf("[-] Skip: Failed to sync database for registry zone %s\n", strings.ToUpper(currentCC))
+				continue
+			}
+			out, _ := os.Create(cache)
 			bufio.NewReader(resp.Body).WriteTo(out)
 			out.Close()
 		}
-	}
-	
-	var allIPs []string
-	f, _ := os.Open(cachePath)
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		cidr := strings.TrimSpace(scanner.Text())
-		if cidr != "" && !strings.HasPrefix(cidr, "#") {
-			allIPs = append(allIPs, expandCIDR(cidr)...)
+
+		f, err := os.Open(cache)
+		if err != nil { continue }
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line != "" && !strings.HasPrefix(line, "#") {
+				ip, ipnet, err := net.ParseCIDR(line)
+				if err == nil {
+					for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); incIP(ip) {
+						allIPs = append(allIPs, ip.String())
+					}
+				}
+			}
 		}
+		f.Close()
 	}
 	return allIPs
-}
-
-func expandCIDR(cidr string) []string {
-	ip, ipnet, err := net.ParseCIDR(cidr)
-	if err != nil { return nil }
-	var ips []string
-	for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); incIP(ip) {
-		ips = append(ips, ip.String())
-	}
-	return ips
 }
 
 func incIP(ip net.IP) {
@@ -90,13 +124,15 @@ func incIP(ip net.IP) {
 }
 
 func check(ip string, port int) bool {
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, port), 500*time.Millisecond)
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, port), 600*time.Millisecond)
 	if err != nil { return false }
 	conn.Close()
 	return true
 }
 
 func pickRandomIPs(pool []string, count int) []string {
+	if len(pool) == 0 { return nil }
+	if count > len(pool) { count = len(pool) }
 	res := make([]string, count)
 	for i := 0; i < count; i++ {
 		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(pool))))
