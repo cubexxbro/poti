@@ -187,7 +187,6 @@ func main() {
 	}
 
 	for _, ip := range targets {
-		tasksChan = append(tasksChan, ip) // Built-in non-blocking queue safely handled
 		tasksChan <- ip
 	}
 	close(tasksChan)
