@@ -1,0 +1,41 @@
+name: Build-Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build macOS (Intel)
+        run: GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o poti-darwin-amd64 main.go
+
+      - name: Build macOS (Apple Silicon)
+        run: GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o poti-darwin-arm64 main.go
+
+      - name: Build Linux (amd64)
+        run: GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o poti-linux-amd64 main.go
+
+      - name: Build Linux (arm64)
+        run: GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o poti-linux-arm64 main.go
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            poti-darwin-amd64
+            poti-darwin-arm64
+            poti-linux-amd64
+            poti-linux-arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
