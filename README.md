@@ -31,19 +31,40 @@ Use the **Drag-and-Drop Method** to ensure success:
 
 ---
 
-## 🛠️ 3. Command-Line Arguments & Usage
+## 🛠️ 3. Smart Interactive Execution
 
-`poti v0.4.0` supports dynamic flag parsing. You can customize the extraction limit, target ports, and target countries directly from your terminal.
+`poti v0.5.0` features a completely interactive terminal Wizard. You do not need to memorize or type complex CLI command flags anymore. Just fire it up and answer the prompt questions step-by-step!
 
-### Available Flags
-* `-cc` : Target country code (`CN`, `US`, `JP`). Default is `CN`.
-* `-limit` : Number of random targets/IPs to extract from the geo-pool. Default is `5`.
-* `-ports` : Target ports to audit (comma-separated). Default is `80,443,8080`.
+### How to Run:
+1. Type `./` in your terminal.
+2. Drag and drop the `poti-darwin-arm64` binary into the terminal window.
+3. Press **Enter**.
 
-### Execution Examples
+### Interactive Walkthrough Example:
+```text
+          _   _ 
+ ___  ___| |_(_)
+| '_ \/ _ \ __| |
+| |_) | (_) | |_| |
+| .__/ \___/\__|_|
+|_|              
 
-#### Example 1: Map Random 10 Nodes in the US Targeting Port 8080 Only
-This command extracts 10 crypto-grade random nodes from the US IP pool and runs aggressive TCP protocol handshakes on port 8080 to uncover hidden services:
-```bash
-# Type "./" then drag and drop the file into terminal, then append the flags:
-[dragged_file_path] -cc US -limit 10 -ports 8080
+[+] poti Engine - Smart Interactive Radar v0.5.0
+--------------------------------------------------
+[?] Select Target Geographical Region:
+  1. China (CN)
+  2. United States (US)
+  3. Japan (JP)
+Choose option (1-3, default 1): 2
+
+[?] How many random IPs to extract? (default 5): 10
+
+[?] Enter ports to scan (comma-separated, default 80,443,8080): 8080
+
+--------------------------------------------------
+[*] Launching Radar Mode...
+[*] Target Region  : US
+[*] Extracted Nodes: 10 targets
+[*] Target Ports   : [8080]
+--------------------------------------------------
+[*] Mapping live space assets...
