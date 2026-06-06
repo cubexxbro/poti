@@ -23,11 +23,11 @@ type IPInfo struct {
 	Org          string `json:"org"`
 	Postal       string `json:"postal"`
 	Timezone     string `json:"timezone"`
-	Readme       string `json:"readme"`
 }
 
 func main() {
 	for {
+		clearScreen()
 		fmt.Println(`
   _____   ____   _______  _____ 
  |  __ \ / __ \ |__   __||_   _|
@@ -36,7 +36,7 @@ func main() {
  | |    | |__| |   | |    _| |_ 
  |_|     \____/    |_|   |_____|
                                 `)
-		fmt.Println("[+] poti v0.8.5 - Global Intelligence Radar Engine")
+		fmt.Println("[+] poti v0.8.1 - Global Intelligence Radar Engine")
 		fmt.Println("==================================================")
 		fmt.Println(" [1] Pure Edge-to-Edge Global Random Scanner")
 		fmt.Println(" [2] Target IP Intelligence Lookup Engine")
@@ -64,7 +64,10 @@ func main() {
 }
 
 func runScanner(reader *bufio.Reader) {
-	fmt.Print("\nQuota (Total targeted active nodes to find before auto-exit): ")
+	clearScreen()
+	fmt.Println("[*] Entering Mode 1: Global Edge Scanner")
+	fmt.Println("--------------------------------------------------")
+	fmt.Print("Quota (Total targeted active nodes to find before auto-exit): ")
 	q, _ := reader.ReadString('\n')
 	limit := 100
 	fmt.Sscanf(strings.TrimSpace(q), "%d", &limit)
@@ -123,16 +126,23 @@ func runScanner(reader *bufio.Reader) {
 	wg.Wait()
 	close(results)
 
-	fmt.Printf("[*] Radar operation finished. Total active assets verified: %d\n\n", activeCount)
+	fmt.Printf("\n[*] Radar operation finished. Total active assets verified: %d\n", activeCount)
+	fmt.Print("Press Enter to return to main menu...")
+	reader.ReadString('\n')
 }
 
 func runLookup(reader *bufio.Reader) {
-	fmt.Print("\nEnter Target IP Address: ")
+	clearScreen()
+	fmt.Println("[*] Entering Mode 2: IP Intelligence Lookup")
+	fmt.Println("--------------------------------------------------")
+	fmt.Print("Enter Target IP Address: ")
 	ipInput, _ := reader.ReadString('\n')
 	ipInput = strings.TrimSpace(ipInput)
 
 	if net.ParseIP(ipInput) == nil {
 		fmt.Println("[-] Absolute parsing failure: Token string is not a valid IPv4/IPv6 layout.")
+		fmt.Print("\nPress Enter to return to main menu...")
+		reader.ReadString('\n')
 		return
 	}
 
@@ -142,24 +152,32 @@ func runLookup(reader *bufio.Reader) {
 	resp, err := client.Get(fmt.Sprintf("https://ipinfo.io/%s/json", ipInput))
 	if err != nil {
 		fmt.Printf("[-] API Link Interrupted: Unable to fetch geolocation structures -> %v\n", err)
+		fmt.Print("\nPress Enter to return to main menu...")
+		reader.ReadString('\n')
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		fmt.Printf("[-] Server returned operational error metric code: %d\n", resp.StatusCode)
+		fmt.Print("\nPress Enter to return to main menu...")
+		reader.ReadString('\n')
 		return
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("[-] Infrastructure payload stream parsing crash.")
+		fmt.Print("\nPress Enter to return to main menu...")
+		reader.ReadString('\n')
 		return
 	}
 
 	var info IPInfo
 	if err := json.Unmarshal(body, &info); err != nil {
 		fmt.Println("[-] Metadata deserialization structurally corrupted.")
+		fmt.Print("\nPress Enter to return to main menu...")
+		reader.ReadString('\n')
 		return
 	}
 
@@ -174,6 +192,9 @@ func runLookup(reader *bufio.Reader) {
 	fmt.Printf("  Timezone    : %s\n", info.Timezone)
 	fmt.Println("==============================================================")
 	fmt.Println("[*] Data retrieval cycle executed successfully.\n")
+	
+	fmt.Print("Press Enter to return to main menu...")
+	reader.ReadString('\n')
 }
 
 func generateGlobalIP() string {
@@ -208,4 +229,8 @@ func check(ip string, port int) bool {
 	}
 	conn.Close()
 	return true
+}
+
+func clearScreen() {
+	fmt.Print("\033[H\033[2J")
 }
