@@ -1,4 +1,4 @@
-name: Build-Binaries
+name: Build Release
 
 on:
   push:
@@ -6,36 +6,35 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: arm64
+            name: macos-apple-silicon
+          - goos: darwin
+            goarch: amd64
+            name: macos-intel
+          - goos: linux
+            goarch: amd64
+            name: linux-x86_64
+          - goos: windows
+            goarch: amd64
+            name: windows-x86_64
+            ext: .exe
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
-          go-version: '1.22'
-
-      - name: Build macOS (Intel)
-        run: GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o poti-darwin-amd64 main.go
-
-      - name: Build macOS (Apple Silicon)
-        run: GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o poti-darwin-arm64 main.go
-
-      - name: Build Linux (amd64)
-        run: GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o poti-linux-amd64 main.go
-
-      - name: Build Linux (arm64)
-        run: GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o poti-linux-arm64 main.go
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+          go-version: '1.20'
+      - name: Build
+        run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o poti-v${{ github.ref_name }}-${{ matrix.name }}${{ matrix.ext }} main.go
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          files: |
-            poti-darwin-amd64
-            poti-darwin-arm64
-            poti-linux-amd64
-            poti-linux-arm64
+          files: poti-v${{ github.ref_name }}-${{ matrix.name }}${{ matrix.ext }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
