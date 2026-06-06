@@ -16,14 +16,13 @@ import (
 
 func main() {
 	fmt.Println(`
-                               
-  _ __   ___   _ __  _       
- | '_ \ / _ \ | __|(_)      
- | |_) | (_) || |_  | |      
- | .__/ \___/  \__| |_|      
- |_|                         
-                             
-    `)
+  _____   ____   _______  _____ 
+ |  __ \ / __ \ |__   __||_   _|
+ | |__) | |  | |   | |     | |  
+ |  ___/| |  | |   | |     | |  
+ | |    | |__| |   | |    _| |_ 
+ |_|     \____/    |_|   |_____|
+                                `)
 	fmt.Println("[+] poti v0.8.0 - Global Intelligence Radar")
 	fmt.Println("[*] Mode: Verbose Global Scanning")
 	
