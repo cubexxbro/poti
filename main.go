@@ -241,7 +241,7 @@ func main() {
 	fmt.Println("  1. China (CN)")
 	fmt.Println("  2. United States (US)")
 	fmt.Println("  3. Japan (JP)")
-	fmt.Println("  4. 🧹 Clear All Downloaded Cache Data (一键清理下载数据)")
+	fmt.Println("  4. Purge Local Registry Caches")
 	fmt.Print("Choose option (1-4, default 1): ")
 	ccInput, _ := reader.ReadString('\n')
 	ccInput = strings.TrimSpace(ccInput)
