@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./5921829631248591829.jpeg" width="200" alt="poti logo">
+  <img src="https://raw.githubusercontent.com/cubexxbro/poti/refs/heads/main/poti-logo.png" width="200" alt="poti logo">
 </p>
 
 # poti
