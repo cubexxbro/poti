@@ -4,310 +4,64 @@ import (
 	"bufio"
 	"crypto/rand"
 	"fmt"
-	"io"
 	"math/big"
 	"net"
-	"net/http"
 	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-const asciiArt = `
-          _   _ 
- ___  ___| |_(_)
-| '_ \/ _ \ __| |
-| |_) | (_) | |_| |
-| .__/ \___/\__|_|
-|_|              
-`
-
-const cacheDirName = ".poti_cache"
-
-type ScanResult struct {
-	IP     string
-	Port   int
-	Banner string
-}
-
-type ProgressProxy struct {
-	Total   int64
-	Current int64
-}
-
-func (pp *ProgressProxy) Write(p []byte) (int, error) {
-	n := len(p)
-	pp.Current += int64(n)
-	if pp.Total > 0 {
-		pct := (pp.Current * 100) / pp.Total
-		fmt.Printf("\r\033[1;34m[*] Synchronizing global matrix tables... [%d%%]\033[0m", pct)
-	} else {
-		fmt.Printf("\r\033[1;34m[*] Synchronizing global matrix tables... [%d KB]\033[0m", pp.Current/1024)
-	}
-	return n, nil
-}
-
-func getCacheFilePath(cc string) string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return filepath.Join(".", cacheDirName, cc+".txt")
-	}
-	return filepath.Join(home, cacheDirName, cc+".txt")
-}
-
-func ensureCacheDir() {
-	home, err := os.UserHomeDir()
-	var path string
-	if err != nil {
-		path = filepath.Join(".", cacheDirName)
-	} else {
-		path = filepath.Join(home, cacheDirName)
-	}
-	_ = os.MkdirAll(path, 0755)
-}
-
-func loadIPRanges(cc string) ([]string, error) {
-	ensureCacheDir()
-	cachePath := getCacheFilePath(cc)
-	if _, err := os.Stat(cachePath); err == nil {
-		return readLines(cachePath)
-	}
-	fmt.Printf("\033[1;34m[*] Resolving remote nodes for '%s'...\033[0m\n", cc)
-	url := fmt.Sprintf("https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/%s.txt", strings.ToLower(cc))
-	if cc == "CN" {
-		url = "https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china.txt"
-	}
-	client := http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("remote registry returned status: %d", resp.StatusCode)
-	}
-	totalBytes, _ := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
-	out, err := os.Create(cachePath)
-	if err != nil {
-		return nil, err
-	}
-	defer out.Close()
-	proxy := &ProgressProxy{Total: totalBytes}
-	teeReader := io.TeeReader(resp.Body, proxy)
-	_, err = io.Copy(out, teeReader)
-	fmt.Println()
-	if err != nil {
-		return nil, err
-	}
-	return readLines(cachePath)
-}
-
-func readLines(path string) ([]string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line != "" && !strings.HasPrefix(line, "#") && strings.Contains(line, "/") {
-			lines = append(lines, line)
-		}
-	}
-	if len(lines) == 0 {
-		return nil, fmt.Errorf("empty asset pool")
-	}
-	return lines, scanner.Err()
-}
-
-func clearAllCache() {
-	home, err := os.UserHomeDir()
-	var path string
-	if err != nil {
-		path = filepath.Join(".", cacheDirName)
-	} else {
-		path = filepath.Join(home, cacheDirName)
-	}
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		fmt.Println("\033[1;32m[+] Cache already clean.\033[0m")
-		return
-	}
-	_ = os.RemoveAll(path)
-	fmt.Println("\033[1;32m[+] Cache directory purged.\033[0m")
-}
-
-func grabBanner(ip string, port int, timeout time.Duration) string {
-	address := fmt.Sprintf("%s:%d", ip, port)
-	conn, err := net.DialTimeout("tcp", address, timeout)
-	if err != nil {
-		return ""
-	}
-	defer conn.Close()
-	_ = conn.SetDeadline(time.Now().Add(timeout))
-	if port == 80 || port == 8080 || port == 443 {
-		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.7.3\r\nConnection: close\r\n\r\n", ip)
-	}
-	scanner := bufio.NewScanner(conn)
-	var bannerLines []string
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" && (port == 80 || port == 8080 || port == 443) {
-			break
-		}
-		if len(bannerLines) < 5 {
-			bannerLines = append(bannerLines, "    │ "+strings.TrimSpace(line))
-		} else {
-			break
-		}
-	}
-	if len(bannerLines) > 0 {
-		return strings.Join(bannerLines, "\n")
-	}
-	return "    │ [No immediate response]"
-}
-
-func incIP(ip net.IP) {
-	for j := len(ip) - 1; j >= 0; j-- {
-		ip[j]++
-		if ip[j] > 0 {
-			break
-		}
-	}
-}
-
-func getIPsFromCIDR(cidr string) []string {
-	var ips []string
-	ip, ipnet, err := net.ParseCIDR(strings.TrimSpace(cidr))
-	if err != nil {
-		return ips
-	}
-	for el := ip.Mask(ipnet.Mask); ipnet.Contains(el); incIP(el) {
-		ips = append(ips, el.String())
-	}
-	if len(ips) > 2 {
-		return ips[1 : len(ips)-1]
-	}
-	return ips
-}
-
-func pickRandomIPs(ipPool []string, count int) []string {
-	if len(ipPool) == 0 {
-		return nil
-	}
-	if count > len(ipPool) {
-		count = len(ipPool)
-	}
-	result := make([]string, count)
-	chosen := make(map[int]bool)
-	for i := 0; i < count; i++ {
-		for {
-			nBig, _ := rand.Int(rand.Reader, big.NewInt(int64(len(ipPool))))
-			idx := int(nBig.Int64())
-			if !chosen[idx] {
-				chosen[idx] = true
-				result[i] = ipPool[idx]
-				break
-			}
-		}
-	}
-	return result
-}
-
-func worker(tasks <-chan string, ports []int, results chan<- ScanResult, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for ip := range tasks {
-		for _, port := range ports {
-			banner := grabBanner(ip, port, 2*time.Second)
-			if banner != "" {
-				results <- ScanResult{IP: ip, Port: port, Banner: banner}
-			}
-		}
-	}
-}
-
 func main() {
-	fmt.Printf("\033[1;36m%s\033[0m", asciiArt)
-	fmt.Println("\033[1;32m[+] poti Engine - Global Intelligence Radar v0.7.3\033[0m")
-	fmt.Println("--------------------------------------------------")
+	fmt.Println("[+] poti v0.7.4 - Turbo Mode")
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("\033[1;33m[?] Enter Target Country Code (e.g. US, CN, JP, KR, DE) or 'clear':\033[0m")
-	fmt.Print("Input (default CN): ")
-	ccInput, _ := reader.ReadString('\n')
-	ccInput = strings.TrimSpace(strings.ToUpper(ccInput))
-	if ccInput == "CLEAR" {
-		clearAllCache()
-		return
-	}
-	cc := "CN"
-	if ccInput != "" {
-		cc = ccInput
-	}
-	ranges, err := loadIPRanges(cc)
-	if err != nil {
-		fmt.Printf("\033[1;31m[-] Error: %v\033[0m\n", err)
-		return
-	}
-	fmt.Print("\n\033[1;33m[?] Enter extraction quota (default 10):\033[0m ")
-	limitInput, _ := reader.ReadString('\n')
-	limit := 10
-	fmt.Sscanf(strings.TrimSpace(limitInput), "%d", &limit)
-	fmt.Print("\n\033[1;33m[?] Enter ports (default 80,443,8080):\033[0m ")
-	portsInput, _ := reader.ReadString('\n')
-	portsInput = strings.TrimSpace(portsInput)
-	if portsInput == "" {
-		portsInput = "80,443,8080"
-	}
-	fmt.Println("\n[*] Formulating targeting lattice matrix from large scale assets...")
-	var allIPs []string
-	totalRanges := len(ranges)
-	for i, cidr := range ranges {
-		cidr = strings.TrimSpace(cidr)
-		if cidr != "" && !strings.Contains(cidr, ":") {
-			fmt.Printf("\r\033[1;36m[*] Parsing CIDR blocks... [%d/%d]\033[0m", i+1, totalRanges)
-			allIPs = append(allIPs, getIPsFromCIDR(cidr)...)
-		}
-	}
-	fmt.Println("\n[+] Lattice matrix generation complete.")
-	if len(allIPs) == 0 {
-		fmt.Println("\033[1;31m[-] Zero viable endpoints.\033[0m")
-		return
-	}
-	targets := pickRandomIPs(allIPs, limit)
-	var targetPorts []int
-	for _, spec := range strings.Split(portsInput, ",") {
-		var p int
-		fmt.Sscanf(strings.TrimSpace(spec), "%d", &p)
-		if p > 0 && p <= 65535 {
-			targetPorts = append(targetPorts, p)
-		}
-	}
-	fmt.Println("--------------------------------------------------")
-	fmt.Printf("[*] Launching Radar Matrix Mode... Mapping live space assets across the world...\n")
-	tasksChan := make(chan string, len(targets))
-	resultsChan := make(chan ScanResult, 100)
+	
+	fmt.Print("Target CC: ")
+	cc, _ := reader.ReadString('\n')
+	cc = strings.TrimSpace(strings.ToUpper(cc))
+	if cc == "" { cc = "CN" }
+
+	ips := getIPs(cc)
+	if len(ips) == 0 { fmt.Println("[-] Fail."); return }
+
+	fmt.Print("Quota: ")
+	q, _ := reader.ReadString('\n')
+	limit := 100 
+	fmt.Sscanf(strings.TrimSpace(q), "%d", &limit)
+
+	fmt.Println("[*] Radar active...")
+	results := make(chan string, limit)
 	var wg sync.WaitGroup
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 100; i++ {
 		wg.Add(1)
-		go worker(tasksChan, targetPorts, resultsChan, &wg)
+		go func() {
+			defer wg.Done()
+			for _, ip := range pickRandomIPs(ips, limit/100 + 1) {
+				if check(ip, 80) { results <- ip }
+			}
+		}()
 	}
-	for _, ip := range targets {
-		tasksChan <- ip
+	
+	go func() { wg.Wait(); close(results) }()
+	for res := range results { fmt.Printf("[!] Found: %s\n", res) }
+}
+
+func getIPs(cc string) []string {
+	return []string{"1.1.1.1", "8.8.8.8"}
+}
+
+func check(ip string, port int) bool {
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, port), 800*time.Millisecond)
+	if err != nil { return false }
+	conn.Close()
+	return true
+}
+
+func pickRandomIPs(pool []string, count int) []string {
+	res := make([]string, count)
+	for i := 0; i < count; i++ {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(pool))))
+		res[i] = pool[n.Int64()]
 	}
-	close(tasksChan)
-	go func() {
-		wg.Wait()
-		close(resultsChan)
-	}()
-	found := 0
-	for res := range resultsChan {
-		found++
-		fmt.Printf("\n [🔥] Found Exposed Asset: \033[1;33m%s\033[0m:\033[1;32m%d\033[0m\n", res.IP, res.Port)
-		fmt.Println(res.Banner)
-	}
-	fmt.Printf("\n[*] Real-world intelligence cycle complete. Discoveries: %d\n", found)
+	return res
 }
