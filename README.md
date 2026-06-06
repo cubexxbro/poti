@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/cubexxbro/poti/refs/heads/main/poti-logo.png" width="500" alt="poti logo">
+  <img src="./5921829631248591829.jpeg" width="200" alt="poti logo">
 </p>
 
 # poti
@@ -10,50 +10,40 @@ Active Network Asset Monitoring & High-Performance Space Mapping Engine.
 
 ## 🚀 Quick Start Guide
 
-`poti` is a highly concurrent CLI tool designed for network asset scanning and banner grabbing. Follow the instructions below to get it running on your system.
+`poti` is an independent, high-performance cyber intelligence gathering radar. It allows you to target geographical regions natively using your local execution stack, eliminating third-party API dependencies or token costs.
 
 ### 📥 1. Download the Binary
-Go to the **Releases** page on the right side of this repository and download the executable tailored to your hardware architecture:
+Go to the **Releases** page and download the executable tailored to your hardware architecture:
 * **macOS (Apple Silicon M1/M2/M3/M4):** `poti-darwin-arm64`
 * **macOS (Intel Core):** `poti-darwin-amd64`
 * **Linux (Standard 64-bit Server):** `poti-linux-amd64`
 * **Linux (ARM Router/Raspberry Pi):** `poti-linux-arm64`
 
-### 💻 2. Deployment & Execution
+### 💻 2. Deployment & Permissions
 
-Open your terminal and execute the following commands based on your deployment path.
+To run the tool, you must grant execution permissions first. If you type `chmod +x poti-darwin-arm64` directly, it might fail with a "No such file or directory" error because the terminal is looking at the wrong folder. 
 
-#### For Linux / macOS:
-```bash
-# Navigate to the folder where the binary is located (e.g., Desktop)
-cd ~/Desktop
+Use the **Drag-and-Drop Method** to ensure success:
 
-# Grant execution permissions to the engine
-chmod +x poti-darwin-arm64
-
-### 💻 2. Deployment & Execution
-
-Open your terminal and use **one of the two methods** below to grant permissions and run the tool. 
-
-#### Method A: The Drag-and-Drop Method (Easiest & Recommended)
-If you directly type `chmod +x poti-darwin-arm64`, it might fail with a "No such file or directory" error because the terminal is not looking at the right folder. Use the mouse to assist instead:
-
-1. Type `chmod +x ` in your terminal (**Make sure to add a trailing SPACE after `+x`**, do not press Enter yet).
-2. Drag the downloaded `poti-darwin-arm64` file from your desktop/finder and **drop it directly into the terminal window**. The terminal will automatically populate the full file path.
+1. Open your terminal, type `chmod +x ` (**Make sure to add a trailing SPACE after `+x`**, do not press Enter yet).
+2. Drag the downloaded `poti-darwin-arm64` file from your desktop/finder and **drop it directly into the terminal window**. The terminal will automatically populate the full absolute file path.
 3. Press **Enter**.
-4. Type `./` and drag-and-drop the file into the terminal **for the second time**, then press **Enter** to fire up the engine.
 
-#### Method B: The Absolute Path Method
-Alternatively, you can manually navigate to the file's directory before executing the command:
+---
 
+## 🛠️ 3. Command-Line Arguments & Usage
+
+`poti v0.4.0` supports dynamic flag parsing. You can customize the extraction limit, target ports, and target countries directly from your terminal.
+
+### Available Flags
+* `-cc` : Target country code (`CN`, `US`, `JP`). Default is `CN`.
+* `-limit` : Number of random targets/IPs to extract from the geo-pool. Default is `5`.
+* `-ports` : Target ports to audit (comma-separated). Default is `80,443,8080`.
+
+### Execution Examples
+
+#### Example 1: Map Random 10 Nodes in the US Targeting Port 8080 Only
+This command extracts 10 crypto-grade random nodes from the US IP pool and runs aggressive TCP protocol handshakes on port 8080 to uncover hidden services:
 ```bash
-# Move to the Desktop directory where the binary is saved
-cd ~/Desktop
-
-# Grant execution permissions to the binary inside this folder
-chmod +x poti-darwin-arm64
-
-# Fire up the engine
-./poti-darwin-arm64
-# Fire up the engine
-./poti-darwin-arm64
+# Type "./" then drag and drop the file into terminal, then append the flags:
+[dragged_file_path] -cc US -limit 10 -ports 8080
