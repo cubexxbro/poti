@@ -1,11 +1,13 @@
 package main
 
 import (
-	"bufio"
+	"encoding/json"
+	"flag"
 	"fmt"
-	"net"
+	"net/http"
+	"net/url"
+	"os"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -18,98 +20,94 @@ const asciiArt = `
 |_|              
 `
 
-type ScanResult struct {
-	Port   int
-	Banner string
+type ShodanHost struct {
+	IP        string   `json:"ip_str"`
+	Port      int      `json:"port"`
+	Org       string   `json:"org"`
+	Data      string   `json:"data"`
+	Transport string   `json:"transport"`
 }
 
-func grabBanner(ip string, port int, timeout time.Duration) string {
-	address := fmt.Sprintf("%s:%d", ip, port)
-	conn, err := net.DialTimeout("tcp", address, timeout)
-	if err != nil {
-		return ""
-	}
-	defer conn.Close()
+type ShodanResponse struct {
+	Matches []ShodanHost `json:"matches"`
+	Total   int          `json:"total"`
+}
 
-	_ = conn.SetDeadline(time.Now().Add(timeout))
-
-	if port == 80 || port == 8080 || port == 443 {
-		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.2.0\r\nConnection: close\r\n\r\n", ip)
-	}
-
-	scanner := bufio.NewScanner(conn)
-	var bannerLines []string
+func searchShodan(query string, apiKey string) (*ShodanResponse, error) {
+	apiURL := fmt.Sprintf("https://api.shodan.io/shodan/host/search?key=%s&query=%s", apiKey, url.QueryEscape(query))
 	
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" && (port == 80 || port == 8080 || port == 443) {
-			break
-		}
-		if len(bannerLines) < 8 {
-			bannerLines = append(bannerLines, "    │ "+strings.TrimSpace(line))
-		} else {
-			break
-		}
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status code %d", resp.StatusCode)
 	}
 
-	if len(bannerLines) > 0 {
-		return strings.Join(bannerLines, "\n")
+	var result ShodanResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
 	}
-	return "    │ [No immediate response / Silent service]"
-}
-
-func scanWorker(ip string, ports <-chan int, results chan<- ScanResult, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for port := range ports {
-		banner := grabBanner(ip, port, 3*time.Second)
-		if banner != "" {
-			results <- ScanResult{Port: port, Banner: banner}
-		}
-	}
+	return &result, nil
 }
 
 func main() {
 	fmt.Printf("\033[1;36m%s\033[0m", asciiArt)
-	fmt.Println("\033[1;32m[+] poti Engine - Active IP Monitoring System v0.2.0\033[0m")
+	fmt.Println("\033[1;32m[+] poti Engine - Space Mapping Search v0.3.0\033[0m")
 	fmt.Println("--------------------------------------------------")
 
-	targetIP := "127.0.0.1"
-	portsToScan := []int{21, 22, 23, 25, 53, 80, 110, 143, 443, 8080, 8888}
+	queryFlag := flag.String("q", "", "Search query (keyword, port, or IP)")
+	apiKeyFlag := flag.String("key", "", "Shodan API Key")
+	flag.Parse()
 
-	fmt.Printf("[*] Target IP: %s\n", targetIP)
-	fmt.Printf("[*] Scanning & Grabbing banners from %d ports...\n\n", len(portsToScan))
-
-	numWorkers := 5
-	portsChan := make(chan int, len(portsToScan))
-	resultsChan := make(chan ScanResult, len(portsToScan))
-
-	var wg sync.WaitGroup
-
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go scanWorker(targetIP, portsChan, resultsChan, &wg)
+	apiKey := *apiKeyFlag
+	if apiKey == "" {
+		apiKey = os.Getenv("SHODAN_API_KEY")
 	}
 
-	for _, port := range portsToScan {
-		portsChan <- port
+	if *queryFlag == "" {
+		fmt.Println("\033[1;31m[-] Error: Search query (-q) is required.\033[0m")
+		fmt.Println("Usage:")
+		fmt.Println("  ./poti -q \"product:Apache\" -key \"YOUR_API_KEY\"")
+		fmt.Println("  ./poti -q \"8.8.8.8\"")
+		fmt.Println("\n*Or set environment variable: export SHODAN_API_KEY=your_key")
+		fmt.Println("--------------------------------------------------")
+		return
 	}
-	close(portsChan)
 
-	wg.Wait()
-	close(resultsChan)
+	if apiKey == "" {
+		fmt.Println("\033[1;31m[-] Error: Shodan API key is missing.\033[0m")
+		fmt.Println("Please provide it via -key or SHODAN_API_KEY environment variable.")
+		fmt.Println("--------------------------------------------------")
+		return
+	}
 
-	fmt.Println("----------------- Discovery Report -----------------")
-	found := 0
-	for result := range resultsChan {
-		found++
-		fmt.Printf(" [🔥] Port \033[1;33m%d\033[0m is OPEN\n", result.Port)
-		fmt.Println(result.Banner)
+	fmt.Printf("[*] Querying global intelligence for: \"%s\"...\n\n", *queryFlag)
+
+	results, err := searchShodan(*queryFlag, apiKey)
+	if err != nil {
+		fmt.Printf("\033[1;31m[-] API Request Failed: %v\033[0m\n", err)
+		return
+	}
+
+	fmt.Printf("----------------- Discovery Report (Total: %d) -----------------\n", results.Total)
+	
+	for _, match := range results.Matches {
+		fmt.Printf(" [🔥] Target: \033[1;33m%s\033[0m:\033[1;32m%d\033[0m (%s/%s)\n", match.IP, match.Port, match.Transport, match.Org)
+		
+		lines := strings.Split(strings.TrimSpace(match.Data), "\n")
+		for i, line := range lines {
+			if i < 5 {
+				fmt.Printf("    │ %s\n", strings.TrimSpace(line))
+			} else {
+				fmt.Println("    │ ... [Truncated]")
+				break
+			}
+		}
 		fmt.Println()
 	}
-
-	if found == 0 {
-		fmt.Println(" [-] No active services responded in this cycle.")
-	}
 	fmt.Println("--------------------------------------------------")
-	fmt.Println("\n[*] Monitoring cycle finished. Awaiting next pulse...")
 }
