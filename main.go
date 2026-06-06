@@ -24,12 +24,6 @@ const asciiArt = `
 |_|              
 `
 
-var geoDataURLs = map[string]string{
-	"CN": "https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china.txt",
-	"US": "https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/us.txt",
-	"JP": "https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/jp.txt",
-}
-
 const cacheDirName = ".poti_cache"
 
 type ScanResult struct {
@@ -66,15 +60,16 @@ func loadIPRanges(cc string) ([]string, error) {
 	}
 
 	fmt.Printf("\033[1;34m[*] Local database missing. Syncing full real-time %s asset pool from network...\033[0m\n", cc)
-	url, exists := geoDataURLs[cc]
-	if !exists {
-		return nil, fmt.Errorf("country unsupported")
+	
+	url := fmt.Printf("https://raw.githubusercontent.com/herrbischoff/country-ip-blocks/master/ipv4/%s.txt", strings.ToLower(cc))
+	if cc == "CN" {
+		url = "https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china.txt"
 	}
 
 	client := http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Get(url)
-	if err != nil {
-		return nil, err
+	if err != nil || resp.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to fetch data or country code '%s' is invalid/unsupported", cc)
 	}
 	defer resp.Body.Close()
 
@@ -143,7 +138,7 @@ func grabBanner(ip string, port int, timeout time.Duration) string {
 	_ = conn.SetDeadline(time.Now().Add(timeout))
 
 	if port == 80 || port == 8080 || port == 443 {
-		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.6.1\r\nConnection: close\r\n\r\n", ip)
+		fmt.Fprintf(conn, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: poti/0.7.0\r\nConnection: close\r\n\r\n", ip)
 	}
 
 	scanner := bufio.NewScanner(conn)
@@ -232,31 +227,25 @@ func worker(tasks <-chan string, ports []int, results chan<- ScanResult, wg *syn
 
 func main() {
 	fmt.Printf("\033[1;36m%s\033[0m", asciiArt)
-	fmt.Println("\033[1;32m[+] poti Engine - Autonomous Intelligence Radar v0.6.1\033[0m")
+	fmt.Println("\033[1;32m[+] poti Engine - Global Intelligence Radar v0.7.0\033[0m")
 	fmt.Println("--------------------------------------------------")
 
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Println("\033[1;33m[?] Select Target Action or Geographical Region:\033[0m")
-	fmt.Println("  1. China (CN)")
-	fmt.Println("  2. United States (US)")
-	fmt.Println("  3. Japan (JP)")
-	fmt.Println("  4. Purge Local Registry Caches")
-	fmt.Print("Choose option (1-4, default 1): ")
+	fmt.Println("\033[1;33m[?] Enter Target Country Code (e.g. US, CN, JP, KR, DE) or 'clear':\033[0m")
+	fmt.Print("Input (default CN): ")
 	ccInput, _ := reader.ReadString('\n')
-	ccInput = strings.TrimSpace(ccInput)
+	ccInput = strings.TrimSpace(strings.ToUpper(ccInput))
 
-	if ccInput == "4" {
+	if ccInput == "CLEAR" {
 		fmt.Println("\n[*] Running secure system cleaner...")
 		clearAllCache()
 		return
 	}
 
 	cc := "CN"
-	if ccInput == "2" {
-		cc = "US"
-	} else if ccInput == "3" {
-		cc = "JP"
+	if ccInput != "" {
+		cc = ccInput
 	}
 
 	ranges, err := loadIPRanges(cc)
@@ -315,7 +304,7 @@ func main() {
 	fmt.Printf("[*] Total Available Pool Size: %d live public subnets\n", len(allIPs))
 	fmt.Printf("[*] Extracted Audit Targets  : %d random nodes\n", len(targets))
 	fmt.Printf("[*] Target Verification Ports: %v\n", targetPorts)
-	fmt.Println("--------------------------------------------------\n[*] Mapping live space assets across the ocean...")
+	fmt.Println("--------------------------------------------------\n[*] Mapping live space assets across the world...")
 
 	tasksChan := make(chan string, len(targets))
 	resultsChan := make(chan ScanResult, 100)
