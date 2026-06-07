@@ -1,4 +1,4 @@
-# 📡 poti v0.8.2 - Global Intelligence Radar & Wireless Auditing Engine
+# 📡 poti v0.8.3 - Global Intelligence Radar & Wireless Auditing Engine
 
 poti is a high-performance, lightweight network intelligence and tactical edge auditing framework engineered entirely in Go. Designed for decentralized security operations, poti cuts out external third-party registry dependencies during perimeter scans by utilizing live mathematical target generation directly from your local shell. 
 
@@ -17,13 +17,13 @@ This branch (`feature-wifi-audit`) introduces on-site hardware-level wireless in
 * **Metadata Extraction Registry**: Performs precision queries to dissect external assets by returning structural JSON matrices.
 * **Deep Geolocation Mapping**: Exposes localized parameters including autonomous system context (`ISP/Org`), routing zones (`Country`, `Region`, `City`), postal metrics, and geographical coordinate vectors.
 
-### 3. Wireless Wi-Fi Security & Risk Auditing (Mode 3)
+### 3. Wireless Wi-Fi Security & Gate Association (Mode 3)
 * **Local Baseline Inspection**: Probes active internal network interfaces to discover binding addresses and physical default gateways instantly.
 * **Cross-Platform Native Radio Binding**: Seamlessly hooks into host operating system wireless utilities to pull active surrounding access points:
   * **macOS (Darwin)**: Intersects the private `Apple80211` framework subsystem resource pipeline via `airport`.
   * **Linux**: Communicates directly with the NetworkManager wireless abstraction layer via `nmcli`.
   * **Windows**: Wraps the native Wireless Local Area Network service layer via `netsh`.
-* **Heuristic Threat Classification**: Intercepts wireless metadata frames to assess encryption standard hygiene (e.g., classifying open broadcast capture fields or rogue public hotpots as `HIGH RISK`).
+* **Heuristic Threat Classification**: Intercepts wireless metadata frames to assess encryption standard hygiene (e.g., classifying open broadcast capture fields or rogue public hotpots as `HIGH RISK`) and provides the local HTTP/HTTPS access gateways.
 
 ---
 
