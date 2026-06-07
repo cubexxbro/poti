@@ -38,7 +38,7 @@ func main() {
  | |    | |__| |   | |    _| |_ 
  |_|     \____/    |_|   |_____|
                                 `)
-		fmt.Println("[+] poti v0.8.3 - Global Intelligence Radar Engine")
+		fmt.Println("[+] poti v0.8.4 - Global Intelligence Radar Engine")
 		fmt.Println("================================================================")
 		fmt.Println(" [1] Pure Edge-to-Edge Global Random Scanner")
 		fmt.Println(" [2] Target IP Intelligence Lookup Engine")
@@ -186,11 +186,8 @@ func scanSurroundingWifi() {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("[!] Dynamic hardware interface restricted. Displaying captured cache baseline:")
-		fmt.Println("    SSID                      BSSID              RSSI   SECURITY")
-		fmt.Println("    ChinaNet-Home-8F82        a4:3d:d3:21:8f:82  -45    WPA2(PSK)")
-		fmt.Println("    Xiong_Studio_5G           c8:3a:35:12:ef:44  -32    WPA2/WPA3")
-		fmt.Println("    Starbucks_Free_WiFi       00:23:af:77:bc:11  -78    NONE")
+		fmt.Printf("[-] Hardware Interface Error: %v\n", err)
+		fmt.Println("[-] Privilege restriction or interface disconnected. Unable to fetch real-time radio frames.")
 		return
 	}
 	fmt.Println(string(output))
@@ -332,7 +329,7 @@ func runLookup(reader *bufio.Reader) {
 	}
 
 	var info IPInfo
-	if err := json.Unmarshal(body, &info); err != nil {
+	if err := json.Unmarshal(body, err != nil); err != nil {
 		fmt.Println("[-] Metadata deserialization structurally corrupted.")
 		fmt.Print("\nPress Enter to return to main menu...")
 		reader.ReadString('\n')
