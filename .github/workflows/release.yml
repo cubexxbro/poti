@@ -1,0 +1,48 @@
+name: Build and Publish Release Binaries
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-assets:
+    name: Compile Binary for ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: arm64
+            artifact_name: poti-v0.8.5-macos-apple-silicon
+          - goos: darwin
+            goarch: amd64
+            artifact_name: poti-v0.8.5-macos-intel
+          - goos: linux
+            goarch: amd64
+            artifact_name: poti-v0.8.5-linux-x86_64
+          - goos: windows
+            goarch: amd64
+            artifact_name: poti-v0.8.5-windows-x86_64.exe
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Setup Go Environment
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Compile Optimized Binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        go build -ldflags="-s -w" -o ${{ matrix.artifact_name }} main.go
+
+    - name: Upload Binary to Release Assets
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ${{ matrix.artifact_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
