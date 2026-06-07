@@ -1,31 +1,17 @@
-# poti - Global Intelligence Radar
+# 📡 poti v0.8.1 - Global Intelligence Radar Engine
 
-`poti` is a high-performance, autonomous network reconnaissance tool engineered for large-scale asset discovery and global intelligence gathering. It leverages real-time routing registry data to dynamically map sovereign network spaces and verify active services.
-
-## 🏗️ Architecture Overview
-
-
-
-`poti` utilizes a multi-stage asynchronous pipeline to convert raw CIDR registries into actionable network reconnaissance targets, optimized for throughput and minimal latency.
+poti is a high-performance, decentralized edge auditing framework engineered entirely in Go. By eliminating external third-party registry dependencies during live sweeps, poti mathematically generates and analyses target arrays directly from your local hardware pipeline.
 
 ## 🚀 Key Features
 
-* **High-Throughput Turbo Engine**: 100+ concurrent worker routines for rapid TCP service verification.
-* **Geopolitical Targeting**: Dynamic resolution of IP pools by ISO-3166 country codes.
-* **Low-Latency Recon**: Aggressive connection timeouts and decoupled pipeline architecture.
-* **Zero-Dependency**: Pure Go implementation for maximum portability.
+* **Global Edge Scanner**: Performs pure math-based random public IPv4 targeting across the entire live global perimeter, bypassing internal private ranges automatically.
+* **Target IP Intelligence Lookup**: Queries advanced metadata records including provider ISP, sovereign region, localized city zones, and spatial geo-coordinates for any designated host.
+* **Wireless Security & Risk Auditing (New)**: Executes one-click environmental assessment tracking native physical gateways, radio environments, surrounding SSID encryption flags, and open hotspot risk categorization.
+* **Persistent Interactive Menu**: Provides an integrated, clear-screen console UI that allows you to easily jump between tasks without dropping the active shell sequence.
 
-## 🛠️ Getting Started
+## 🛠️ Usage Instructions
 
-### Prerequisites
-* **Go (Golang) 1.18+** installed on your system.
-
-### Compilation
-To build the `poti` binary for your platform, run the following command in the project root:
-
+### Authorization
+Before initial setup execution inside your terminal workspace, register correct file permission mappings:
 ```bash
-# Build the binary
-go build -o poti main.go
-
-# Verify installation
-./poti --help
+chmod +x poti
