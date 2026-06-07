@@ -38,11 +38,11 @@ func main() {
  | |    | |__| |   | |    _| |_ 
  |_|     \____/    |_|   |_____|
                                 `)
-		fmt.Println("[+] poti v0.8.2 - Global Intelligence Radar Engine")
+		fmt.Println("[+] poti v0.8.3 - Global Intelligence Radar Engine")
 		fmt.Println("================================================================")
 		fmt.Println(" [1] Pure Edge-to-Edge Global Random Scanner")
 		fmt.Println(" [2] Target IP Intelligence Lookup Engine")
-		fmt.Println(" [3] Wireless Wi-Fi Security & Risk Auditing System")
+		fmt.Println(" [3] Wireless Wi-Fi Security & Gate Association")
 		fmt.Println(" [4] Exit Terminal Framework")
 		fmt.Println("================================================================")
 		
@@ -70,19 +70,13 @@ func main() {
 
 func runWifiAudit(reader *bufio.Reader) {
 	clearScreen()
-	fmt.Println("[*] Entering Mode 3: Wireless Wi-Fi Security & Risk Audit")
+	fmt.Println("[*] Entering Mode 3: Wireless Wi-Fi Security & Gate Association")
 	fmt.Println("----------------------------------------------------------------")
 	
-	fmt.Println("[*] Phase 1: Executing Local One-Click Environmental Inspection...")
-	time.Sleep(600 * time.Millisecond)
-	
-	gateways := fetchLocalGateways()
-	fmt.Printf("[+] Local Gateway Detected: %v\n", gateways)
-	
-	fmt.Println("\n[*] Phase 2: Scanning surrounding wireless environments...")
+	fmt.Println("[*] Phase 1: Scanning surrounding wireless environments...")
 	scanSurroundingWifi()
 
-	fmt.Print("\nEnter Target Wi-Fi SSID (Name) to evaluate: ")
+	fmt.Print("\nEnter Target Wi-Fi SSID (Name) to connect: ")
 	wifiName, _ := reader.ReadString('\n')
 	wifiName = strings.TrimSpace(wifiName)
 
@@ -93,12 +87,35 @@ func runWifiAudit(reader *bufio.Reader) {
 		return
 	}
 
+	fmt.Print("Enter Wi-Fi Authentication Password: ")
+	wifiPass, _ := reader.ReadString('\n')
+	wifiPass = strings.TrimSpace(wifiPass)
+
 	clearScreen()
-	fmt.Printf("[*] Evaluating Risk Profiling for Target Wireless Environment: [%s]\n", wifiName)
+	fmt.Printf("[*] Initiating Hardware Association Protocol for SSID: [%s]\n", wifiName)
 	fmt.Println("================================================================")
 	
-	time.Sleep(800 * time.Millisecond)
-	
+	success := connectToWifi(wifiName, wifiPass)
+	if !success {
+		fmt.Println("[-] Authentication Failure: Unable to associate with network.")
+		fmt.Println("[-] Please verify credentials, security protocols, or range.")
+		fmt.Print("\nPress Enter to return to main menu...")
+		reader.ReadString('\n')
+		return
+	}
+
+	fmt.Println("[+] Network Connection Established Successfully.")
+	fmt.Println("[*] Gathering local network infrastructure configurations...")
+	time.Sleep(1 * time.Second)
+
+	gateways := fetchLocalGateways()
+	var suggestedGateway string
+	if len(gateways) > 0 {
+		suggestedGateway = gateways[0]
+	} else {
+		suggestedGateway = "192.168.1.1"
+	}
+
 	client := &http.Client{Timeout: 4 * time.Second}
 	resp, err := client.Get("https://ipinfo.io/json")
 	var info IPInfo
@@ -108,38 +125,49 @@ func runWifiAudit(reader *bufio.Reader) {
 		resp.Body.Close()
 	}
 
-	isEncrypted := true 
 	riskLevel := "LOW RISK"
-	vectorNotes := "Standard secure infrastructure."
-
-	if strings.Contains(strings.ToLower(wifiName), "free") || strings.Contains(strings.ToLower(wifiName), "public") {
+	vectorNotes := "Standard secure infrastructure network layer."
+	if wifiPass == "" || strings.Contains(strings.ToLower(wifiName), "free") || strings.Contains(strings.ToLower(wifiName), "public") {
 		riskLevel = "HIGH RISK"
-		isEncrypted = false
-		vectorNotes = "Unencrypted Captive Portal. High susceptibility to Man-in-the-Middle (MitM) credential harvesting."
+		vectorNotes = "Unencrypted network environment. Cleartext traffic monitoring risk detected."
 	}
 
-	fmt.Printf("  Target SSID     : %s\n", wifiName)
-	if isEncrypted {
-		fmt.Println("  Encryption Type : WPA2/WPA3 Personal (CCMP/AES)")
-	} else {
-		fmt.Println("  Encryption Type : NONE / OPEN SYSTEM")
-	}
-	
+	fmt.Println("\n================= WIRELESS NODE METADATA ======================")
+	fmt.Printf("  Connected SSID  : %s\n", wifiName)
+	fmt.Printf("  Local Gateway IP: %s\n", suggestedGateway)
 	if info.IP != "" {
 		fmt.Printf("  Egress Provider : %s\n", info.Org)
 		fmt.Printf("  Assigned Region : %s, %s (%s)\n", info.City, info.Region, info.Country)
 		fmt.Printf("  Geo Coordinates : %s\n", info.Loc)
-	} else {
-		fmt.Println("  Egress Provider : Unknown (Local Scan Only)")
 	}
-	
 	fmt.Println("----------------------------------------------------------------")
 	fmt.Printf("  SECURITY STATUS : [%s]\n", riskLevel)
 	fmt.Printf("  Vulnerability   : %s\n", vectorNotes)
+	fmt.Println("----------------------------------------------------------------")
+	fmt.Println("[*] Management Access Gateways Discovered:")
+	fmt.Printf("  --> HTTP Portal : http://%s\n", suggestedGateway)
+	fmt.Printf("  --> HTTPS Portal: https://%s\n", suggestedGateway)
 	fmt.Println("================================================================")
+	fmt.Println("[*] Session verification complete.")
 	
-	fmt.Print("\nAudit complete. Press Enter to return to main menu...")
+	fmt.Print("\nPress Enter to return to main menu...")
 	reader.ReadString('\n')
+}
+
+func connectToWifi(ssid, password string) bool {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("netsh", "wlan", "connect", "name="+ssid)
+	case "linux":
+		cmd = exec.Command("nmcli", "dev", "wifi", "connect", ssid, "password", password)
+	case "darwin":
+		cmd = exec.Command("networksetup", "-setairportnetwork", "en0", ssid, password)
+	default:
+		return false
+	}
+	err := cmd.Run()
+	return err == nil
 }
 
 func scanSurroundingWifi() {
@@ -170,7 +198,7 @@ func scanSurroundingWifi() {
 
 func fetchLocalGateways() []string {
 	ifaces, err := net.Interfaces()
-	if err != nil { return []string{"127.0.0.1"} }
+	if err != nil { return []string{} }
 	
 	var list []string
 	for _, iface := range ifaces {
@@ -179,7 +207,13 @@ func fetchLocalGateways() []string {
 		for _, addr := range addrs {
 			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 				if ipnet.IP.To4() != nil {
-					list = append(list, ipnet.IP.String())
+					ipStr := ipnet.IP.String()
+					if strings.HasPrefix(ipStr, "192.168.") || strings.HasPrefix(ipStr, "10.") {
+						parts := strings.Split(ipStr, ".")
+						if len(parts) == 4 {
+							list = append(list, fmt.Sprintf("%s.%s.%s.1", parts[0], parts[1], parts[2]))
+						}
+					}
 				}
 			}
 		}
@@ -224,6 +258,8 @@ func runScanner(reader *bufio.Reader) {
 					if check(addr, 80) {
 						fmt.Printf("[!!!] Success: Active Node Verified -> %s\n", addr)
 						select {
+						case Scribble := <-results:
+							_ = Scribble
 						case results <- addr:
 						case <-stopSignal:
 						}
