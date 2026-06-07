@@ -10,23 +10,23 @@
 
 poti is a high-performance, lightweight network intelligence and tactical edge auditing framework engineered entirely in Go. Designed for decentralized security operations, poti cuts out external third-party registry dependencies during perimeter scans by utilizing live mathematical target generation directly from your local shell. 
 
-Starting with `v0.8.5`, the architecture introduces an advanced hardware-level radio spectrum profiling and automated tool discovery layer, seamlessly navigating host operating system environments to locate underlying wireless control binaries.
+Starting with `v0.8.5`, the architecture introduces an advanced hardware-level radio spectrum profiling and automated tool discovery layer, sequentially scanning the entire primary root partition to locate underlying wireless control binaries.
 
 ---
 
-## 📥 Instant Deployment (No Compilation Required)
+## 📥 Instant Deployment & Quick Start (No Compilation Required)
 
-Starting with v0.8.5, pre-compiled binaries are dynamically attached to each release. You **do not need to install Go or compile anything manually**. Follow these steps to run `poti` instantly:
+Starting with v0.8.5, pre-compiled production binaries are dynamically attached to each release. You **do not need to install Go or compile anything manually**. 
+
+### For Windows Users (Instant Execution):
+1. Download `poti-v0.8.5-windows-x86_64.exe` from the Release Assets.
+2. **Drag and drop** the `.exe` file into your CMD or PowerShell window and press **Enter** (or simply double-click it directly) to initialize the radar instantly.
 
 ### For macOS & Linux Users:
-1. Download the executable matching your architecture from the **Releases** assets section.
-2. Open your terminal, type `chmod +x ` (**make sure to add a trailing space**).
+1. Download the executable matching your hardware architecture from the Release Assets.
+2. Open your local terminal, type `chmod +x ` (**make sure to add a trailing space after +x**).
 3. **Drag and drop** the downloaded binary file directly from your file manager into the terminal window, then hit **Enter** to authorize execution permissions.
-4. From now on, simply **drag the file into any terminal window and press Enter** to launch the radar engine instantly.
-
-### For Windows Users:
-1. Download `poti-v0.8.5-windows-x86_64.exe`.
-2. Drag and drop the `.exe` file into your CMD or PowerShell window and press **Enter** (or double-click it directly).
+4. From now on, simply **drag the file into any terminal window and press Enter** to launch the framework instantly.
 
 ---
 
@@ -42,8 +42,8 @@ Starting with v0.8.5, pre-compiled binaries are dynamically attached to each rel
 * **Deep Geolocation Mapping**: Exposes localized parameters including autonomous system context (`ISP/Org`), routing zones (`Country`, `Region`, `City`), postal codes, and geographical coordinate vectors.
 
 ### 3. Wireless Wi-Fi Security & Gate Association (Mode 3)
-* **Dynamic Subsystem Path Discovery**: Replaces rigid hardcoded binary configurations with a recursive multi-root platform file crawler. If native system binaries (`airport`, `nmcli`, `netsh`) reside outside standard environment variables, the grid engine steps through the filesystem to self-heal and resolve dependencies.
-* **Real-time Search Stream Buffer**: Pipes live directory crawling logs directly into the terminal interface using synchronized line carriage metrics, granting full execution status visibility before hardware engagement.
+* **Deep Root Partition Crawler**: Upgraded to recursively scan the entire primary root partition (`/` or `C:\`) instead of restrictive hardcoded paths. It sequentially steps through system layouts to self-heal and resolve wireless control binary paths.
+* **Real-time Search Stream Buffer**: Pipes live directory crawling logs directly into the terminal interface using synchronized `\r` carriage-return metrics, granting full execution status visibility before hardware engagement.
 * **Heuristic Threat Classification**: Intercepts wireless metadata frames to assess encryption standard hygiene (e.g., classifying open broadcast capture fields or rogue public hotpots as `HIGH RISK`) and provides local HTTP/HTTPS gateway vectors.
 
 ---
@@ -54,13 +54,11 @@ Starting with v0.8.5, pre-compiled binaries are dynamically attached to each rel
 | :--- | :--- | :--- | :--- | :--- |
 | **Global Edge Scanner** | Unlimited IPv4 Ranges | Runtime Cryptographic Math | Outbound Internet Pipe | Cross-Platform (Go Runtime) |
 | **IP Intelligence Lookup** | Individual Node Target | REST Infrastructure API | Outbound Port 443 | Cross-Platform (Go Runtime) |
-| **Wireless Security Audit** | Surrounding AP Radios | Recursive Subsystem Pathing | Local Wireless Interface | macOS / Linux / Windows |
+| **Wireless Security Audit** | Surrounding AP Radios | Complete Drive Partition Scan | Local Wireless Interface | macOS / Linux / Windows |
 
 ---
 
 ## 🖥️ User Interface Preview
-
-Upon launching, `poti` clears the terminal history and presents a clean interactive UI selection menu:
 
 ```text
   _____   ____   _______  _____ 
