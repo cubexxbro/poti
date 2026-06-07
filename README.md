@@ -1,4 +1,4 @@
-# 📡 poti v0.8.3 - Global Intelligence Radar & Wireless Auditing Engine
+# 📡 poti v0.8.4 - Global Intelligence Radar & Wireless Auditing Engine
 
 poti is a high-performance, lightweight network intelligence and tactical edge auditing framework engineered entirely in Go. Designed for decentralized security operations, poti cuts out external third-party registry dependencies during perimeter scans by utilizing live mathematical target generation directly from your local shell. 
 
