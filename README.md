@@ -14,6 +14,22 @@ Starting with `v0.8.5`, the architecture introduces an advanced hardware-level r
 
 ---
 
+## 📥 Instant Deployment (No Compilation Required)
+
+Starting with v0.8.5, pre-compiled binaries are dynamically attached to each release. You **do not need to install Go or compile anything manually**. Follow these steps to run `poti` instantly:
+
+### For macOS & Linux Users:
+1. Download the executable matching your architecture from the **Releases** assets section.
+2. Open your terminal, type `chmod +x ` (**make sure to add a trailing space**).
+3. **Drag and drop** the downloaded binary file directly from your file manager into the terminal window, then hit **Enter** to authorize execution permissions.
+4. From now on, simply **drag the file into any terminal window and press Enter** to launch the radar engine instantly.
+
+### For Windows Users:
+1. Download `poti-v0.8.5-windows-x86_64.exe`.
+2. Drag and drop the `.exe` file into your CMD or PowerShell window and press **Enter** (or double-click it directly).
+
+---
+
 ## 🚀 Core Architectural Modules
 
 ### 1. Global Edge Scanner (Mode 1)
@@ -42,21 +58,23 @@ Starting with `v0.8.5`, the architecture introduces an advanced hardware-level r
 
 ---
 
-## ⚙️ Prerequisites & Environment Setup
+## 🖥️ User Interface Preview
 
-Ensure your local operating system satisfies the execution criteria before deployment:
+Upon launching, `poti` clears the terminal history and presents a clean interactive UI selection menu:
 
-### Go Compiler Environment
-If compiling from source, use **Go 1.21** or higher.
-
-### System Privileges
-* **macOS / Linux**: Intersecting native hardware radio interface frames via command-line sub-tools often requires elevated root permissions depending on local system sandbox structures (e.g., run with `sudo`).
-
----
-
-## 🛠️ Operating Instructions
-
-### 1. Build and Binary Compilation
-To compile the architecture into an optimized single binary layout, execute the standard compilation flag sequence inside your terminal workspace:
-```bash
-go build -ldflags="-s -w" -o poti main.go
+```text
+  _____   ____   _______  _____ 
+ |  __ \ / __ \ |__   __||_   _|
+ | |__) | |  | |   | |     | |  
+ |  ___/| |  | |   | |     | |  
+ | |    | |__| |   | |    _| |_ 
+ |_|     \____/    |_|   |_____|
+                                
+[+] poti v0.8.5 - Global Intelligence Radar Engine
+================================================================
+ [1] Pure Edge-to-Edge Global Random Scanner
+ [2] Target IP Intelligence Lookup Engine
+ [3] Wireless Wi-Fi Security & Gate Association
+ [4] Exit Terminal Framework
+================================================================
+Select Operational Mode [1-4]:
