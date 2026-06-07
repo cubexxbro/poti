@@ -38,7 +38,7 @@ func main() {
  | |    | |__| |   | |    _| |_ 
  |_|     \____/    |_|   |_____|
                                 `)
-		fmt.Println("[+] poti v0.8.1 - Global Intelligence Radar Engine")
+		fmt.Println("[+] poti v0.8.2 - Global Intelligence Radar Engine")
 		fmt.Println("================================================================")
 		fmt.Println(" [1] Pure Edge-to-Edge Global Random Scanner")
 		fmt.Println(" [2] Target IP Intelligence Lookup Engine")
